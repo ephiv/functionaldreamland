@@ -2,7 +2,7 @@
 
 Functional Dreamland (or Programmer's Dreamland) is a terminal-based coding game where you solve algorithmic challenges (similar to LeetCode) using the functional programming language **Clojure**.
 
-You code in your favorite modal editor (like Vim), which is embedded directly into the game loop. When ready, the game's test runner evaluates your solution against examples and hundreds of hidden test cases.
+You code in your favorite modal editor (like nano), which is embedded directly into the game loop. When ready, the game's test runner evaluates your solution against examples and hundreds of hidden test cases.
 
 ## Requirements
 
