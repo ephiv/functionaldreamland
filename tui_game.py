@@ -11,7 +11,7 @@ from textual.widgets import (
     Static, RichLog, Input, Label, Markdown, MarkdownViewer,
     TextArea, TabbedContent, TabPane, ListView, ListItem,
 )
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.binding import Binding
 from game import Game, CommandError
 
@@ -78,7 +78,14 @@ class MenuScreen(Screen):
         padding: 1 2;
         background: #0d1116 55%;
     }
-    #menu-text { height: 1fr; }
+    #menu-scroll {
+        height: 1fr;
+        scrollbar-gutter: stable;
+        padding-right: 1;
+    }
+    #menu-text {
+        width: 1fr;
+    }
     #menu-cmd  { height: 3; margin-top: 1; }
     """
 
@@ -90,7 +97,8 @@ class MenuScreen(Screen):
         yield ClojureBackground(id="menu-bg")
         with Vertical(id="menu-center"):
             with Vertical(id="menu-box"):
-                yield Static(id="menu-text")
+                with VerticalScroll(id="menu-scroll"):
+                    yield Static(id="menu-text")
                 yield Input(
                     placeholder="Type command: start | continue | tutorial | reset | quit",
                     id="menu-cmd",
@@ -149,8 +157,8 @@ class MenuScreen(Screen):
                 game.solved.clear()
                 game.idx = 0
                 game._update_current_file()
-                if not game.current_file.exists():
-                    game._reset_workspace()
+                game._clear_workspace_solutions()
+                game._reset_workspace()
                 game._save()
                 # Also refresh the game screen if it's already mounted
                 try:
@@ -657,3 +665,5 @@ class DreamlandTUI(App[None]):
 
 if __name__ == "__main__":
     DreamlandTUI().run()
+
+

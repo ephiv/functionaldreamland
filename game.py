@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import json
 import gzip
 import subprocess
@@ -303,7 +303,7 @@ class Game:
 
     @property
     def levels(self):
-        """Compatibility shim â€” lets callers use len(game.levels)."""
+        """Compatibility shim — lets callers use len(game.levels)."""
         return _LevelCountProxy(len(self.loader))
 
     @property
@@ -350,8 +350,15 @@ class Game:
     def _reset_workspace(self) -> None:
         self.current_file.write_text(self.level.starter_code, encoding="utf-8")
 
+    def _clear_workspace_solutions(self) -> None:
+        for path in self.workspace_dir.glob("solution_*.clj"):
+            try:
+                path.unlink()
+            except OSError:
+                pass
+
     # ------------------------------------------------------------------
-    # Level selection â€” all levels freely accessible, no locking
+    # Level selection — all levels freely accessible, no locking
     # ------------------------------------------------------------------
 
     def select(self, n: int) -> str:
@@ -379,7 +386,7 @@ class Game:
                 if not self.current_file.exists():
                     self._reset_workspace()
                 self._save()
-                return f"â†’ [{pack_id}] {self.level.title}"
+                return f"→ [{pack_id}] {self.level.title}"
         raise CommandError(f"Level {level_id} not found in pack '{pack_id}'.")
 
     # ------------------------------------------------------------------
@@ -403,19 +410,20 @@ class Game:
         for c in cases:
             cases_clj += f"  {{:args {c.args} :expected {c.expected}}}\n"
         cases_clj += "]\n"
-
-        validator_block = ""
-        if validator_code:
-            validator_block = f"""
+        validator_block = """
 (defn validate-case [args expected actual]
-  (try
-    (let [res (validate args expected actual)]
-      (cond
-        (map? res) res
-        (boolean? res) {{:pass res}}
-        :else {{:pass false :error "Validator must return boolean or map"}}))
-    (catch Exception e
-      {{:pass false :error (.getMessage e)}})))
+  (if validator-enabled?
+    (try
+      (if-let [v (resolve 'validate)]
+        (let [res (v args expected actual)]
+          (cond
+            (map? res) res
+            (boolean? res) {:pass res}
+            :else {:pass false :error \"Validator must return boolean or map\"}))
+        {:pass false :error \"Validator code missing validate function\"})
+      (catch Exception e
+        {:pass false :error (.getMessage e)}))
+    {:pass (= actual expected)}))
 """
 
         runner_code = f"""
@@ -451,11 +459,8 @@ class Game:
           args-str (pr-str (:args test-case))
           base-expected (pr-str expected)
           base-actual   (pr-str res)
-          vres (when validator-enabled?
-                 (validate-case (:args test-case) expected res))
-          pass (if validator-enabled?
-                 (:pass vres)
-                 (= res expected))
+          vres (validate-case (:args test-case) expected res)
+          pass (:pass vres)
           v-expected (when validator-enabled?
                        (:expected vres))
           v-actual   (when validator-enabled?
@@ -539,7 +544,7 @@ class Game:
                             parts.append(f"  Actual:   {actual}")
                             out.append("\n".join(parts))
                     if passed == total:
-                        out.append("All tests passed! đŸ‰")
+                        out.append("All tests passed! 🎉")
                         if mode == "submit":
                             self.solved.add(level.id)
                             self._save()
@@ -567,15 +572,15 @@ class Game:
             return [(
                 "Commands:\n"
                 "  help | levels | status | edit | run | submit | reset | next | reload | quit\n"
-                "  select <n>                  â€” nth level in campaign order (1-based)\n"
-                "  select <pack_id> <level_id> â€” jump directly to a level in a specific pack"
+                "  select <n>                  — nth level in campaign order (1-based)\n"
+                "  select <pack_id> <level_id> — jump directly to a level in a specific pack"
             )]
 
         if k == "levels":
             out = [f"  {'':1}  {'':3}  {'ID':>4}  {'DIFF':<8}  TITLE  [pack]"]
             for i, meta in enumerate(self.loader.all_meta()):
                 lid    = int(meta["id"])
-                marker = "â–¶" if lid == self.level.id else " "
+                marker = "▶" if lid == self.level.id else " "
                 solved = "x" if lid in self.solved else " "
                 pid    = meta.get("_pack_id", "?")
                 out.append(
@@ -603,7 +608,7 @@ class Game:
             pid  = meta.get("_pack_id", "?")
             out  = [
                 "FUNCTIONAL DREAMLAND",
-                f"[{pid}] #{lv.id} â€” Level {self.idx+1}/{len(self.loader)} | {lv.difficulty}",
+                f"[{pid}] #{lv.id} — Level {self.idx+1}/{len(self.loader)} | {lv.difficulty}",
                 f"Title: {lv.title}",
                 f"Description:\n{textwrap.indent(lv.description, '  ')}",
                 f"File: {self.current_file.absolute()}",
@@ -631,7 +636,7 @@ class Game:
 
         if k == "reload":
             self.loader.reload()
-            return [f"Packs reloaded â€” {len(self.loader)} levels available."]
+            return [f"Packs reloaded — {len(self.loader)} levels available."]
 
         if k in {"quit", "exit"}:
             return ["QUIT"]
@@ -639,7 +644,7 @@ class Game:
         raise CommandError("Unknown command. Type `help`.")
 
     def run(self) -> None:
-        print("FUNCTIONAL DREAMLAND â€” Clojure Problem Solving")
+        print("FUNCTIONAL DREAMLAND — Clojure Problem Solving")
         print(self.execute("help")[0])
         while True:
             try:
@@ -668,6 +673,10 @@ class _LevelCountProxy:
 
 if __name__ == "__main__":
     Game().run()
+
+
+
+
 
 
 
